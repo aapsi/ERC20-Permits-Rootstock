@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title ERC20 Token Contract
 /// @notice Implements an ERC20 token with permit functionality.
@@ -40,7 +41,7 @@ contract SpecialToken is ERC20, Ownable, ERC20Permit {
         address from,
         address to,
         uint256 value
-    ) internal override(ERC20, ERC20Permit) {
+    ) internal override(ERC20) {
         super._update(from, to, value);
     }
 }
