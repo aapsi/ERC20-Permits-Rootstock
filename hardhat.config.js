@@ -10,7 +10,7 @@ module.exports = {
     rskTestnet: {
       url: `https://public-node.testnet.rsk.co`,
       chainId: 31,
-      gasPrice: 60000000,
+      gasPrice: auto,
       accounts: [`0x${process.env.ROOTSTOCK_TESTNET_OWNER_PRIVATE_KEY}`, `0x${process.env.ROOTSTOCK_TESTNET_RECEIVER_PRIVATE_KEY}`]
     }
   }

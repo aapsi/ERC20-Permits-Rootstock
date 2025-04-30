@@ -207,7 +207,7 @@ describe("SpecialToken", function () {
       expect(await specialToken.balanceOf(user2.address)).to.equal(value);
     });
 
-    it("should prevent replay attacks", async function () {
+    it("should prevent replay attacks with same nonce", async function () {
       const { specialToken, owner, user1 } = await loadFixture(
         deploySpecialTokenFixture
       );
@@ -382,6 +382,85 @@ describe("SpecialToken", function () {
           sig.v,
           sig.r,
           sig.s
+        )
+      ).to.be.reverted;
+    });
+  });
+
+  describe("EmergencyWithdraw", function () {
+    it("should allow owner to withdraw tokens", async function () {
+      const { specialToken, owner, user1 } = await loadFixture(
+        deploySpecialTokenFixture
+      );
+
+      const tokenAmount = ethers.utils.parseEther("1000");
+      // Transfer tokens to the contract first
+      await specialToken.connect(owner).transfer(specialToken.address, tokenAmount);
+
+      await specialToken.connect(owner).emergencyWithdraw(
+        specialToken.address,
+        user1.address,
+        tokenAmount
+      );
+
+      expect(await specialToken.balanceOf(user1.address)).to.equal(tokenAmount);
+    });
+
+    it("Should revert if amount is 0", async function () {
+      const { specialToken, owner, user1 } = await loadFixture(
+        deploySpecialTokenFixture
+      );
+
+      await expect(
+        specialToken.connect(owner).emergencyWithdraw(
+          specialToken.address,
+          user1.address,
+          ethers.utils.parseEther("0")
+        )
+      ).to.be.reverted;
+    });
+
+    it("Should revert if recipient is 0 address", async function () {
+      const { specialToken, owner } = await loadFixture(
+        deploySpecialTokenFixture
+      );
+
+      await expect(
+        specialToken.connect(owner).emergencyWithdraw(
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          ethers.utils.parseEther("1000")
+        )
+      ).to.be.reverted;
+    });
+
+    it("Should revert if token is 0 address", async function () {
+      const { specialToken, owner } = await loadFixture(
+        deploySpecialTokenFixture
+      );
+
+      await expect(
+        specialToken.connect(owner).emergencyWithdraw(
+          ethers.constants.AddressZero,
+          owner.address,
+          ethers.utils.parseEther("1000")
+        )
+      ).to.be.reverted;
+    });
+
+    it("Should revert if amount is greater than balance", async function () {
+      const { specialToken, owner, user1 } = await loadFixture(
+        deploySpecialTokenFixture
+      );
+
+      const tokenAmount = ethers.utils.parseEther("1000");
+      await specialToken.connect(owner).transfer(user1.address, tokenAmount);
+
+      await expect(
+        specialToken.connect(owner).emergencyWithdraw(
+          owner.address,
+          owner.address,
+          ethers.utils.parseEther("100000")
         )
       ).to.be.reverted;
     });
