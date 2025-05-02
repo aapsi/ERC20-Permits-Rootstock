@@ -1,7 +1,6 @@
-const { ethers } = require("hardhat");
-const { expect } = require("chai");
-const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { time } = require("@nomicfoundation/hardhat-network-helpers");
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
+
+import { expect } from "chai";
 
 describe("SpecialToken", function () {
   // Define a fixture that deploys the SpecialToken contract
@@ -42,7 +41,7 @@ describe("SpecialToken", function () {
 
     it("should set the maxTotalSupply correctly", async function () {
       const { specialToken } = await loadFixture(deploySpecialTokenFixture);
-      const MAX_TOTAL_SUPPLY = ethers.utils.parseEther("1000000000"); // 1 billion tokens with 18 decimals
+      const MAX_TOTAL_SUPPLY = ethers.parseEther("1000000000"); // 1 billion tokens with 18 decimals
       expect(await specialToken.maxSupply()).to.equal(MAX_TOTAL_SUPPLY);
     });
   });
@@ -54,7 +53,7 @@ describe("SpecialToken", function () {
       );
 
       // Transfer tokens from owner to user1
-      const transferAmount = ethers.utils.parseEther("1000");
+      const transferAmount = ethers.parseEther("1000");
       await specialToken.connect(owner).transfer(user1.address, transferAmount);
 
       // Check the balances
@@ -67,7 +66,7 @@ describe("SpecialToken", function () {
       const { specialToken, user1, user2 } = await loadFixture(
         deploySpecialTokenFixture
       );
-      const transferAmount = ethers.utils.parseEther("1000");
+      const transferAmount = ethers.parseEther("1000");
 
       // User1 has no tokens initially
       await expect(
@@ -79,7 +78,7 @@ describe("SpecialToken", function () {
       const { specialToken, owner } = await loadFixture(
         deploySpecialTokenFixture
       );
-      const transferAmount = ethers.utils.parseEther("1000");
+      const transferAmount = ethers.parseEther("1000");
 
       await expect(
         specialToken
@@ -95,7 +94,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const transferAmount = ethers.utils.parseEther("1000");
+      const transferAmount = ethers.parseEther("1000");
       await specialToken.connect(owner).approve(user1.address, transferAmount);
 
       await specialToken
@@ -112,7 +111,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const transferAmount = ethers.utils.parseEther("1000");
+      const transferAmount = ethers.parseEther("1000");
       await expect(
         specialToken
           .connect(user1)
@@ -124,7 +123,7 @@ describe("SpecialToken", function () {
       const { specialToken, owner } = await loadFixture(
         deploySpecialTokenFixture
       );
-      const approvalAmount = ethers.utils.parseEther("1000");
+      const approvalAmount = ethers.parseEther("1000");
 
       await expect(
         specialToken
@@ -140,7 +139,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const value = ethers.utils.parseEther("1000");
+      const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
 
@@ -180,7 +179,7 @@ describe("SpecialToken", function () {
       );
 
       // Split the signature
-      const sig = ethers.utils.splitSignature(signature);
+      const sig = ethers.splitSignature(signature);
 
       // Call permit with the signature components
       await specialToken.permit(
@@ -212,7 +211,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const value = ethers.utils.parseEther("1000");
+      const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
       const deadline = Math.floor(Date.now() / 1000) + 3600;
 
@@ -246,7 +245,7 @@ describe("SpecialToken", function () {
         types,
         message
       );
-      const sig = ethers.utils.splitSignature(signature);
+      const sig = ethers.splitSignature(signature);
 
       // First permit call should succeed
       await specialToken.permit(
@@ -278,7 +277,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const value = ethers.utils.parseEther("1000");
+      const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
       const deadline = Math.floor(Date.now() / 1000); // Current timestamp
 
@@ -312,7 +311,7 @@ describe("SpecialToken", function () {
         types,
         message
       );
-      const sig = ethers.utils.splitSignature(signature);
+      const sig = ethers.splitSignature(signature);
 
       // Increase blockchain time to exceed deadline
       await time.increase(5);
@@ -336,7 +335,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const value = ethers.utils.parseEther("1000");
+      const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
       const deadline = Math.floor(Date.now() / 1000) + 3600;
 
@@ -371,7 +370,7 @@ describe("SpecialToken", function () {
         types,
         message
       );
-      const sig = ethers.utils.splitSignature(signature);
+      const sig = ethers.splitSignature(signature);
 
       await expect(
         specialToken.permit(
@@ -393,7 +392,7 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const tokenAmount = ethers.utils.parseEther("1000");
+      const tokenAmount = ethers.parseEther("1000");
       // Transfer tokens to the contract first
       await specialToken.connect(owner).transfer(specialToken.address, tokenAmount);
 
@@ -415,7 +414,7 @@ describe("SpecialToken", function () {
         specialToken.connect(owner).emergencyWithdraw(
           specialToken.address,
           user1.address,
-          ethers.utils.parseEther("0")
+          ethers.parseEther("0")
         )
       ).to.be.reverted;
     });
@@ -429,7 +428,7 @@ describe("SpecialToken", function () {
         specialToken.connect(owner).emergencyWithdraw(
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
-          ethers.utils.parseEther("1000")
+          ethers.parseEther("1000")
         )
       ).to.be.reverted;
     });
@@ -443,7 +442,7 @@ describe("SpecialToken", function () {
         specialToken.connect(owner).emergencyWithdraw(
           ethers.constants.AddressZero,
           owner.address,
-          ethers.utils.parseEther("1000")
+          ethers.parseEther("1000")
         )
       ).to.be.reverted;
     });
@@ -453,14 +452,14 @@ describe("SpecialToken", function () {
         deploySpecialTokenFixture
       );
 
-      const tokenAmount = ethers.utils.parseEther("1000");
+      const tokenAmount = ethers.parseEther("1000");
       await specialToken.connect(owner).transfer(user1.address, tokenAmount);
 
       await expect(
         specialToken.connect(owner).emergencyWithdraw(
           owner.address,
           owner.address,
-          ethers.utils.parseEther("100000")
+          ethers.parseEther("100000")
         )
       ).to.be.reverted;
     });
