@@ -1,5 +1,7 @@
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
+import { Signature } from "ethers";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 
 describe("SpecialToken", function () {
@@ -81,9 +83,7 @@ describe("SpecialToken", function () {
       const transferAmount = ethers.parseEther("1000");
 
       await expect(
-        specialToken
-          .connect(owner)
-          .transfer(ethers.constants.AddressZero, transferAmount)
+        specialToken.connect(owner).transfer(ethers.ZeroAddress, transferAmount)
       ).to.be.reverted;
     });
   });
@@ -126,9 +126,7 @@ describe("SpecialToken", function () {
       const approvalAmount = ethers.parseEther("1000");
 
       await expect(
-        specialToken
-          .connect(owner)
-          .approve(ethers.constants.AddressZero, approvalAmount)
+        specialToken.connect(owner).approve(ethers.ZeroAddress, approvalAmount)
       ).to.be.reverted;
     });
   });
@@ -141,14 +139,15 @@ describe("SpecialToken", function () {
 
       const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
-      const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const now = await time.latest();
+      const deadline = now + 3600;
 
       // Get the domain separator
       const domainSeparator = {
         name: await specialToken.name(),
         version: "1",
         chainId: (await ethers.provider.getNetwork()).chainId,
-        verifyingContract: specialToken.address,
+        verifyingContract: specialToken.target.toString(),
       };
 
       // Define the types for EIP-712
@@ -172,14 +171,14 @@ describe("SpecialToken", function () {
       };
 
       // Sign the typed data
-      const signature = await owner._signTypedData(
+      const signature = await owner.signTypedData(
         domainSeparator,
         types,
         message
       );
 
       // Split the signature
-      const sig = ethers.splitSignature(signature);
+      const sig = Signature.from(signature);
 
       // Call permit with the signature components
       await specialToken.permit(
@@ -213,13 +212,14 @@ describe("SpecialToken", function () {
 
       const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const now = await time.latest();
+      const deadline = now + 3600;
 
       const domainSeparator = {
         name: await specialToken.name(),
         version: "1",
         chainId: (await ethers.provider.getNetwork()).chainId,
-        verifyingContract: specialToken.address,
+        verifyingContract: specialToken.target.toString(),
       };
 
       const types = {
@@ -240,12 +240,12 @@ describe("SpecialToken", function () {
         deadline: deadline,
       };
 
-      const signature = await owner._signTypedData(
+      const signature = await owner.signTypedData(
         domainSeparator,
         types,
         message
       );
-      const sig = ethers.splitSignature(signature);
+      const sig = Signature.from(signature);
 
       // First permit call should succeed
       await specialToken.permit(
@@ -258,18 +258,37 @@ describe("SpecialToken", function () {
         sig.s
       );
 
+      //   create a new signature with the same nonce
+
+      const deadline2 = (await time.latest()) + 3600;
+
+      const message2 = {
+        owner: owner.address,
+        spender: user1.address,
+        value: value,
+        nonce: nonce,
+        deadline: deadline2,
+      };
+
+      const signature2 = await owner.signTypedData(
+        domainSeparator,
+        types,
+        message2
+      );
+      const sig2 = Signature.from(signature2);
+
       // Second permit call with same nonce should fail
       await expect(
         specialToken.permit(
           owner.address,
           user1.address,
           value,
-          deadline,
-          sig.v,
-          sig.r,
-          sig.s
+          deadline2,
+          sig2.v,
+          sig2.r,
+          sig2.s
         )
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(specialToken, "ERC2612InvalidSigner");
     });
 
     it("should prevent approvals after deadline", async function () {
@@ -279,13 +298,14 @@ describe("SpecialToken", function () {
 
       const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
-      const deadline = Math.floor(Date.now() / 1000); // Current timestamp
+      const now = await time.latest();
+      const deadline = now + 3600; // 1 hour from now
 
       const domainSeparator = {
         name: await specialToken.name(),
         version: "1",
         chainId: (await ethers.provider.getNetwork()).chainId,
-        verifyingContract: specialToken.address,
+        verifyingContract: specialToken.target.toString(),
       };
 
       const types = {
@@ -306,15 +326,15 @@ describe("SpecialToken", function () {
         deadline: deadline,
       };
 
-      const signature = await owner._signTypedData(
+      const signature = await owner.signTypedData(
         domainSeparator,
         types,
         message
       );
-      const sig = ethers.splitSignature(signature);
+      const sig = Signature.from(signature);
 
       // Increase blockchain time to exceed deadline
-      await time.increase(5);
+      await time.increase(3601); // 1 hour and 1 second
 
       // Should fail because deadline has passed
       await expect(
@@ -327,7 +347,7 @@ describe("SpecialToken", function () {
           sig.r,
           sig.s
         )
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(specialToken, "ERC2612ExpiredSignature");
     });
 
     it("should prevent approvals with invalid signatures", async function () {
@@ -337,13 +357,14 @@ describe("SpecialToken", function () {
 
       const value = ethers.parseEther("1000");
       const nonce = await specialToken.nonces(owner.address);
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const now = await time.latest();
+      const deadline = now + 3600;
 
       const domainSeparator = {
         name: await specialToken.name(),
         version: "1",
         chainId: (await ethers.provider.getNetwork()).chainId,
-        verifyingContract: specialToken.address,
+        verifyingContract: specialToken.target.toString(),
       };
 
       const types = {
@@ -365,12 +386,12 @@ describe("SpecialToken", function () {
       };
 
       // user2 signs instead of owner - should be invalid
-      const signature = await user2._signTypedData(
+      const signature = await user2.signTypedData(
         domainSeparator,
         types,
         message
       );
-      const sig = ethers.splitSignature(signature);
+      const sig = Signature.from(signature);
 
       await expect(
         specialToken.permit(
@@ -382,7 +403,7 @@ describe("SpecialToken", function () {
           sig.r,
           sig.s
         )
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(specialToken, "ERC2612InvalidSigner");
     });
   });
 
@@ -394,57 +415,51 @@ describe("SpecialToken", function () {
 
       const tokenAmount = ethers.parseEther("1000");
       // Transfer tokens to the contract first
-      await specialToken.connect(owner).transfer(specialToken.address, tokenAmount);
+      await specialToken
+        .connect(owner)
+        .transfer(specialToken.target, tokenAmount);
 
-      await specialToken.connect(owner).emergencyWithdraw(
-        specialToken.address,
-        user1.address,
-        tokenAmount
-      );
+      await specialToken
+        .connect(owner)
+        .emergencyWithdraw(specialToken.target, user1.address, tokenAmount);
 
       expect(await specialToken.balanceOf(user1.address)).to.equal(tokenAmount);
     });
 
-    it("Should revert if amount is 0", async function () {
+    it("Should revert if amount/recipient/token is 0", async function () {
       const { specialToken, owner, user1 } = await loadFixture(
         deploySpecialTokenFixture
       );
 
       await expect(
-        specialToken.connect(owner).emergencyWithdraw(
-          specialToken.address,
-          user1.address,
-          ethers.parseEther("0")
-        )
-      ).to.be.reverted;
-    });
-
-    it("Should revert if recipient is 0 address", async function () {
-      const { specialToken, owner } = await loadFixture(
-        deploySpecialTokenFixture
-      );
+        specialToken
+          .connect(owner)
+          .emergencyWithdraw(
+            specialToken.target,
+            user1.address,
+            ethers.parseEther("0")
+          )
+      ).to.be.revertedWithCustomError(specialToken, "InvalidAmount");
 
       await expect(
-        specialToken.connect(owner).emergencyWithdraw(
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.parseEther("1000")
-        )
-      ).to.be.reverted;
-    });
-
-    it("Should revert if token is 0 address", async function () {
-      const { specialToken, owner } = await loadFixture(
-        deploySpecialTokenFixture
-      );
+        specialToken
+          .connect(owner)
+          .emergencyWithdraw(
+            ethers.ZeroAddress,
+            user1.address,
+            ethers.parseEther("1000")
+          )
+      ).to.be.revertedWithCustomError(specialToken, "InvalidToken");
 
       await expect(
-        specialToken.connect(owner).emergencyWithdraw(
-          ethers.constants.AddressZero,
-          owner.address,
-          ethers.parseEther("1000")
-        )
-      ).to.be.reverted;
+        specialToken
+          .connect(owner)
+          .emergencyWithdraw(
+            specialToken.target,
+            ethers.ZeroAddress,
+            ethers.parseEther("1000")
+          )
+      ).to.be.revertedWithCustomError(specialToken, "InvalidRecipient");
     });
 
     it("Should revert if amount is greater than balance", async function () {
@@ -456,11 +471,13 @@ describe("SpecialToken", function () {
       await specialToken.connect(owner).transfer(user1.address, tokenAmount);
 
       await expect(
-        specialToken.connect(owner).emergencyWithdraw(
-          owner.address,
-          owner.address,
-          ethers.parseEther("100000")
-        )
+        specialToken
+          .connect(owner)
+          .emergencyWithdraw(
+            owner.address,
+            owner.address,
+            ethers.parseEther("100000")
+          )
       ).to.be.reverted;
     });
   });
